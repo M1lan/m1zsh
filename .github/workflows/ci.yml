@@ -1,0 +1,82 @@
+name: ci
+
+# `on` is quoted to keep YAML 1.1 parsers (PyYAML, yamllint) from coercing the
+# bare key to a boolean. GitHub Actions reads YAML 1.2 either way.
+"on":
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: just check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install apt packages (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            zsh shellcheck ripgrep
+
+      - name: Install just (Linux)
+        if: runner.os == 'Linux'
+        uses: extractions/setup-just@v3
+
+      - name: Install brew packages (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bash ripgrep shellcheck just
+
+      # macOS runners ship Bash 3.2 (Apple licensing freeze) and Ubuntu runners
+      # ship 5.1/5.2 — neither satisfies the project's documented Bash 5.3+
+      # floor. Install GNU Bash via Homebrew on every runner and prepend the
+      # brew bin dir to PATH so subsequent shells resolve to it.
+      - name: Install GNU Bash 5.3+ via Homebrew (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          brew install bash
+          printf '%s\n' "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: Prepend Homebrew bin to PATH (macOS)
+        if: runner.os == 'macOS'
+        run: printf '%s\n' "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: Show tool versions
+        run: |
+          set -eu
+          command -v bash       && bash --version | head -1
+          command -v zsh        && zsh --version
+          command -v rg         && rg --version | head -1
+          command -v just       && just --version
+          command -v shellcheck && shellcheck --version | head -3
+
+      - name: Verify Bash >= 5.3
+        run: |
+          set -eu
+          ver=$(bash -c 'printf "%s" "$BASH_VERSION"')
+          major=${ver%%.*}
+          rest=${ver#*.}
+          minor=${rest%%.*}
+          minor=${minor%%[!0-9]*}
+          if (( major < 5 )) || (( major == 5 && minor < 3 )); then
+            printf 'error: bash %s on PATH; need >= 5.3\n' "$ver" >&2
+            exit 1
+          fi
+
+      - name: just check
+        run: just check

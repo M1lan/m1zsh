@@ -1,5 +1,7 @@
 # m1zsh
 
+[![ci](https://img.shields.io/github/actions/workflow/status/M1lan/m1zsh/ci.yml?branch=main&label=ci&logo=githubactions&logoColor=white)](https://github.com/M1lan/m1zsh/actions/workflows/ci.yml)
+
 A public, modular Zsh configuration built around
 [Zi](https://wiki.zshell.dev/) snippets, turbo-loading, and small readable
 modules.
