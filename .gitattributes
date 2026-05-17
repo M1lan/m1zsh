@@ -1,4 +1,18 @@
+# Line-ending normalization
 * text=auto eol=lf
 *.zsh text eol=lf
 *.bash text eol=lf
 *.md text eol=lf
+
+# Archive hygiene: contributor-only files excluded from `git archive` /
+# GitHub source tarballs. Keep release tarballs slim and free of
+# meta/process noise. Tracked files NOT listed here are included.
+AGENTS.md          export-ignore
+CLAUDE.md          export-ignore
+.editorconfig      export-ignore
+prek.toml          export-ignore
+scripts/           export-ignore
+.github/           export-ignore
+docs/RELEASE-NOTES-v0.1.0.md   export-ignore
+docs/rewrite-strategy.md       export-ignore
+docs/release-checklist.md      export-ignore

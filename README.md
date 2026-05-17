@@ -2,28 +2,23 @@
 
 [![ci](https://img.shields.io/github/actions/workflow/status/M1lan/m1zsh/ci.yml?branch=main&label=ci&logo=githubactions&logoColor=white)](https://github.com/M1lan/m1zsh/actions/workflows/ci.yml)
 
-A public, modular Zsh configuration built around
-[Zi](https://wiki.zshell.dev/) snippets, turbo-loading, and small readable
-modules.
-
-The goal is to turn a personal monolithic shell config into a shareable project
-with a strict privacy boundary: public defaults live here; machine-local and
-account-specific config lives outside the repository.
+A modular, Zi-based Zsh configuration with turbo loading, small per-phase
+modules, and a strict privacy boundary: public defaults ship here; machine-
+local and account-specific config lives outside the repo.
 
 ## Status
 
-Local release-prep rewrite. No GitHub push has been performed.
+Local release-prep rewrite. No GitHub push has been performed yet.
 
 ## Design goals
 
-- **Zi-first**: use Zi plugins, snippets, `wait`/`lucid` turbo loading, and
-  `zicompinit`/`zicdreplay` where they fit.
-- **Small modules**: each file owns one phase of shell startup.
-- **Portable defaults**: macOS-friendly, but guarded so missing tools do not
-  break startup.
-- **Private overlay**: load personal config from ignored local files only.
-- **Release hygiene**: `just` tasks and `prek` hooks check syntax, formatting
-  basics, commit messages, and secret boundaries.
+- **Zi-first**: Zi plugins and snippets, `wait`/`lucid` turbo loading,
+  `zicompinit`/`zicdreplay` where appropriate.
+- **Small modules**: one phase of shell startup per file.
+- **Portable defaults**: macOS-friendly, guarded against missing tools.
+- **Private overlay**: personal config sourced from ignored local files only.
+- **Release hygiene**: `just` tasks and `prek` hooks check syntax, commit
+  messages, and secret boundaries.
 
 ## Layout
 
@@ -40,9 +35,11 @@ Local release-prep rewrite. No GitHub push has been performed.
 ├── completions/                # public generated completions, with provenance
 ├── templates/                  # copy/symlink examples for users
 ├── scripts/                    # dev harness checks
-├── docs/                       # rewrite strategy and privacy notes
+├── docs/                       # rewrite strategy, release notes, privacy
+├── .github/workflows/          # ci.yml, release.yml
 ├── Justfile                    # command center
 ├── prek.toml                   # prek hook config
+├── LICENSE                     # MIT
 ├── AGENTS.md                   # agent/contributor contract
 └── CLAUDE.md                   # @AGENTS.md
 ```
@@ -55,7 +52,7 @@ cd ~/.config/m1zsh
 just check
 ```
 
-Then wire your shell files:
+Wire your shell files:
 
 ```sh
 cp templates/zshenv.zsh ~/.zshenv
@@ -77,13 +74,12 @@ just doctor                                    # full health report
 ~/.config/m1zsh/bin/m1zsh doctor --json | jq . # machine-readable
 ```
 
-`m1zsh doctor` exits `0` when every check passes, `1` if anything is an
-error (e.g. insecure `compaudit` directories), and `2` if only warnings
-were reported.
+`m1zsh doctor` exits `0` on success, `1` on error (e.g. insecure `compaudit`
+directories), and `2` if only warnings were reported.
 
 ## Environment variables
 
-Public knobs the framework reads at load time:
+Public knobs read at load time:
 
 - `M1ZSH_HOME` — repo root; auto-detected from `init.zsh` if unset.
 - `M1ZSH_SKIP_ZI=1` — bypass the Zi bootstrap module (fallbacks still load).
@@ -94,10 +90,11 @@ Public knobs the framework reads at load time:
 - `M1ZSH_COMPINIT_INSECURE=1` — keep `compinit -i` (insecure dirs are still
   skipped) but suppress the one-shot `compaudit` warning. Use only when you
   knowingly run on a multi-user host or with shared group ownership of an
-  fpath dir.
-- `ZCACHEDIR` — cache directory; defaults to `${XDG_CACHE_HOME:-$HOME/.cache}/zsh`.
-  The compiled completion dump lives at `$ZCACHEDIR/.zcompdump(.zwc)` and
-  is rebuilt when older than 24h or staler than any `fpath` entry.
+  `fpath` dir.
+- `ZCACHEDIR` — cache directory; defaults to
+  `${XDG_CACHE_HOME:-$HOME/.cache}/zsh`. The compiled completion dump lives
+  at `$ZCACHEDIR/.zcompdump(.zwc)` and is rebuilt when older than 24h or
+  staler than any `fpath` entry.
 
 ## Personal config boundary
 
@@ -113,12 +110,12 @@ Start from:
 cp templates/personal.zsh ~/.config/m1zsh/personal.zsh
 ```
 
-Never put tokens, OAuth material, private histories, private account names, or
-machine-specific absolute paths in this repository.
+Never put tokens, OAuth material, private histories, private account names,
+or machine-specific absolute paths in this repository.
 
 ## License
 
-m1zsh is released under the MIT License. See [LICENSE](LICENSE) for details.
+m1zsh is released under the MIT License. See [LICENSE](LICENSE).
 
 ## Development
 
@@ -130,22 +127,29 @@ prek run --all-files
 
 Important targets:
 
+- `just check` — full gate: zsh-syntax + secrets + every smoke + prek.
 - `just zsh-syntax` — parse every tracked Zsh file with `zsh -n`.
 - `just secrets` — scan for common secret and private-path patterns.
 - `just smoke` — start a clean interactive Zsh and source `init.zsh`.
-- `just doctor` — run the `m1zsh_doctor` health report.
+- `just smoke-strict` — same, under `nounset`/`pipefail`/`err_return`.
+- `just smoke-twice` — re-source `init.zsh` and assert path/fpath/precmd
+  are stable (idempotency).
+- `just smoke-setopts` — assert interactive `setopt`s survive `m1zsh_source`.
+- `just smoke-completion` — compinit ran, `.zcompdump(.zwc)` exist, framework
+  fpath passes `compaudit`, and the disable-hatch works.
 - `just smoke-doctor` — exercise every doctor output mode.
+- `just doctor` — run the `m1zsh_doctor` health report.
 - `just hook-install` — install `prek` hooks.
+- `just release-audit` — `check` plus the git-author roster.
 
 ## Zi notes
 
-m1zsh follows Zi's documented split between plugins and snippets. Local snippet
-files are loaded with Zi's `is-snippet` ice where possible, while plugin groups
-use `wait` and `lucid` for turbo loading. Completion setup keeps extra fpath
-entries and `zsh-users/zsh-completions` before `compinit`, then replays Zi
-completion definitions.
+m1zsh follows Zi's documented split between plugins and snippets. Local
+snippet files are loaded with Zi's `is-snippet` ice where possible; plugin
+groups use `wait` and `lucid` for turbo loading. Completion setup keeps
+extra fpath entries and `zsh-users/zsh-completions` before `compinit`, then
+replays Zi completion definitions.
 
 ## Before publishing
 
-See `docs/release-checklist.md`. In particular, choose a license before the
-first public push.
+See `docs/release-checklist.md`.
