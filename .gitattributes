@@ -3,10 +3,13 @@
 *.zsh text eol=lf
 *.bash text eol=lf
 *.md text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
 
 # Archive hygiene: contributor-only files excluded from `git archive` /
-# GitHub source tarballs. Keep release tarballs slim and free of
-# meta/process noise. Tracked files NOT listed here are included.
+# GitHub source tarballs. Tracked files NOT listed here ship to end users.
+# docs/privacy-boundary.md is intentionally kept because end users need it
+# to understand the personal-overlay rules.
 AGENTS.md          export-ignore
 CLAUDE.md          export-ignore
 .editorconfig      export-ignore
