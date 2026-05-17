@@ -1,0 +1,63 @@
+default_install_hook_types = ["pre-commit", "pre-push", "commit-msg"]
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+
+[[repos.hooks]]
+id = "check-yaml"
+
+[[repos.hooks]]
+id = "check-toml"
+
+[[repos.hooks]]
+id = "check-json"
+
+[[repos.hooks]]
+id = "check-merge-conflict"
+
+[[repos.hooks]]
+id = "check-added-large-files"
+args = ["--maxkb=512"]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "zsh-syntax"
+name = "zsh syntax"
+language = "system"
+entry = "scripts/check-zsh.bash"
+pass_filenames = false
+files = "(\\.zsh$|(^|/)(init|zshenv)\\.zsh$|(^|/)templates/.*\\.zsh$)"
+
+[[repos.hooks]]
+id = "secret-boundary"
+name = "secret boundary scan"
+language = "system"
+entry = "scripts/scan-secrets.bash"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "shellcheck-harness"
+name = "shellcheck harness scripts"
+language = "system"
+entry = "bash -c 'shellcheck -x scripts/*.bash'"
+pass_filenames = false
+files = "^scripts/.*\\.bash$"
+
+[[repos.hooks]]
+id = "lore-commit-message"
+name = "Lore commit message"
+language = "system"
+entry = "scripts/check-commit-msg.bash"
+stages = ["commit-msg"]
+pass_filenames = true
+always_run = true

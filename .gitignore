@@ -1,0 +1,27 @@
+# local state
+.DS_Store
+*.log
+*.tmp
+*.swp
+*.swo
+
+# secrets / machine-local overlays
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+personal/
+local/
+*.local.zsh
+/personal.zsh
+
+# zsh generated state
+*.zwc
+.zcompdump*
+
+# tool caches
+.cache/
+.prek-cache/
