@@ -25,3 +25,10 @@ local/
 # tool caches
 .cache/
 .prek-cache/
+
+# AI agent working dirs (must never be published)
+.omx/
+.codex/
+.claude/
+.forge/
+.omc/

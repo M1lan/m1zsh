@@ -80,6 +80,10 @@ cp templates/personal.zsh ~/.config/m1zsh/personal.zsh
 Never put tokens, OAuth material, private histories, private account names, or
 machine-specific absolute paths in this repository.
 
+## License
+
+m1zsh is released under the MIT License. See [LICENSE](LICENSE) for details.
+
 ## Development
 
 ```sh
