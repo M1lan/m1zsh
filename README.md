@@ -29,7 +29,10 @@ Local release-prep rewrite. No GitHub push has been performed.
 .
 ├── init.zsh                    # interactive entrypoint for .zshrc
 ├── zshenv.zsh                  # minimal optional .zshenv entrypoint
+├── VERSION                     # SemVer string read by m1zsh_doctor
+├── bin/m1zsh                   # CLI shim: `m1zsh doctor`, version, home
 ├── lib/m1zsh.zsh               # shared loader helpers
+├── lib/doctor.zsh              # m1zsh_doctor health-check implementation
 ├── modules/                    # ordered startup phases
 ├── snippets/                   # reusable public snippets loaded by Zi/source
 ├── completions/                # public generated completions, with provenance
@@ -62,6 +65,19 @@ Install hooks locally:
 ```sh
 just hook-install
 ```
+
+Verify the installation:
+
+```sh
+just doctor                                    # full health report
+~/.config/m1zsh/bin/m1zsh doctor               # same, from any shell
+~/.config/m1zsh/bin/m1zsh doctor --quiet       # one-line summary
+~/.config/m1zsh/bin/m1zsh doctor --json | jq . # machine-readable
+```
+
+`m1zsh doctor` exits `0` when every check passes, `1` if anything is an
+error (e.g. insecure `compaudit` directories), and `2` if only warnings
+were reported.
 
 ## Personal config boundary
 
@@ -97,6 +113,8 @@ Important targets:
 - `just zsh-syntax` — parse every tracked Zsh file with `zsh -n`.
 - `just secrets` — scan for common secret and private-path patterns.
 - `just smoke` — start a clean interactive Zsh and source `init.zsh`.
+- `just doctor` — run the `m1zsh_doctor` health report.
+- `just smoke-doctor` — exercise every doctor output mode.
 - `just hook-install` — install `prek` hooks.
 
 ## Zi notes

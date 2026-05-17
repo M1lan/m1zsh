@@ -3,7 +3,7 @@ set shell := ["bash", "-uc"]
 _default:
   @just --list
 
-check: zsh-syntax secrets smoke smoke-strict smoke-twice smoke-setopts prek-check
+check: zsh-syntax secrets smoke smoke-strict smoke-twice smoke-setopts smoke-doctor prek-check
 
 zsh-syntax:
   @scripts/check-zsh.bash
@@ -83,6 +83,16 @@ smoke-setopts:
 
 prek-check:
   @if command -v prek >/dev/null 2>&1; then prek run --all-files; else printf 'prek not installed; skipping\n' >&2; fi
+
+# Run the health check in a fresh interactive zsh. Use `just doctor -- --json`
+# to forward flags. Exit code mirrors m1zsh_doctor (0 ok, 1 err, 2 warn).
+doctor *args:
+  @zsh -ic 'export M1ZSH_HOME="$PWD"; source "$M1ZSH_HOME/init.zsh"; m1zsh_doctor {{args}}'
+
+# Smoke test for the doctor subsystem: every mode (text/json/quiet) must
+# produce sensible output without leaking absolute home paths.
+smoke-doctor:
+  @scripts/check-doctor.bash
 
 hook-install:
   @prek install --prepare-hooks --hook-type pre-commit --hook-type pre-push --hook-type commit-msg

@@ -82,6 +82,8 @@ m1zsh_load_snippet() {
   file="${M1ZSH_HOME:-}/$rel"
   [[ -r $file ]] || return 0
 
+  typeset -gaU _M1ZSH_LOADED_SNIPPETS
+
   if m1zsh_zi_ready; then
     if [[ -n $wait ]]; then
       zi ice "wait${wait}" lucid nocd is-snippet
@@ -92,6 +94,7 @@ m1zsh_load_snippet() {
   else
     source "$file"
   fi
+  _M1ZSH_LOADED_SNIPPETS+=("$rel")
 }
 
 # Force the next `m1zsh_source` (or `source init.zsh`) to re-run everything.
@@ -102,4 +105,20 @@ m1zsh_reload() {
   for var in ${(k)parameters[(I)_M1ZSH_LOADED*]}; do
     unset $var
   done
+  unset _M1ZSH_LOADED_SNIPPETS 2>/dev/null
+}
+
+# Stub: lazy-load lib/doctor.zsh on first invocation. Keeps doctor (a few
+# hundred lines and never used in the hot path) out of every interactive
+# shell's memory until explicitly asked for.
+m1zsh_doctor() {
+  emulate -L zsh
+  local impl="${M1ZSH_HOME:-}/lib/doctor.zsh"
+  if [[ ! -r $impl ]]; then
+    print -u2 -- "m1zsh_doctor: ${impl} not readable"
+    return 127
+  fi
+  unfunction m1zsh_doctor 2>/dev/null
+  source "$impl"
+  m1zsh_doctor "$@"
 }
