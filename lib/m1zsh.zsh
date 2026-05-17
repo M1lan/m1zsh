@@ -1,51 +1,80 @@
 # Shared helpers for m1zsh modules.
+#
+# All helpers assume the caller is interactive zsh. They are written to be
+# safe under `setopt nounset` and to be re-sourced any number of times
+# without side effects.
 
 m1zsh_warn() {
+  emulate -L zsh
   print -u2 -- "m1zsh: $*"
 }
 
 m1zsh_have() {
+  emulate -L zsh
   (( ${+commands[$1]} ))
 }
 
+# Translate a relative module path into a guard variable name, e.g.
+# `modules/30-completion.zsh` -> `_M1ZSH_LOADED_modules_30_completion_zsh`.
+m1zsh_guard_var() {
+  emulate -L zsh
+  local rel=$1
+  local key=${rel//[^A-Za-z0-9]/_}
+  print -r -- "_M1ZSH_LOADED_${key}"
+}
+
+# Source a module relative to $M1ZSH_HOME, exactly once per shell. The
+# per-module guard lets callers re-source `init.zsh` (or this file) without
+# duplicating side effects.
 m1zsh_source() {
-  local rel=$1 file
-  file="$M1ZSH_HOME/$rel"
+  emulate -L zsh
+  local rel=$1 file key
+  file="${M1ZSH_HOME:-}/$rel"
+  key=$(m1zsh_guard_var "$rel")
+  if (( ${(P)+key} )) && [[ ${(P)key} == 1 ]]; then
+    return 0
+  fi
   if [[ ! -r $file ]]; then
     m1zsh_warn "missing module: $rel"
     return 1
   fi
   source "$file"
+  typeset -g "$key=1"
 }
 
 m1zsh_source_if_exists() {
-  local file=$1
-  [[ -r $file ]] && source "$file"
+  emulate -L zsh
+  local file=${1:-}
+  [[ -n $file && -r $file ]] && source "$file"
 }
 
 m1zsh_prepend_path() {
+  emulate -L zsh
   local dir
   typeset -gU path
   for dir in "$@"; do
-    [[ -d $dir ]] && path=("$dir" $path)
+    [[ -n $dir && -d $dir ]] && path=("$dir" $path)
   done
 }
 
 m1zsh_prepend_fpath() {
+  emulate -L zsh
   local dir
   typeset -gU fpath
   for dir in "$@"; do
-    [[ -d $dir ]] && fpath=("$dir" $fpath)
+    [[ -n $dir && -d $dir ]] && fpath=("$dir" $fpath)
   done
 }
 
 m1zsh_zi_ready() {
+  emulate -L zsh
   (( ${+functions[zi]} ))
 }
 
 m1zsh_load_snippet() {
+  emulate -L zsh
   local rel=$1 wait=${2:-} file
-  file="$M1ZSH_HOME/$rel"
+  file="${M1ZSH_HOME:-}/$rel"
   [[ -r $file ]] || return 0
 
   if m1zsh_zi_ready; then
@@ -58,4 +87,14 @@ m1zsh_load_snippet() {
   else
     source "$file"
   fi
+}
+
+# Force the next `m1zsh_source` (or `source init.zsh`) to re-run everything.
+# Useful for developing modules in-place.
+m1zsh_reload() {
+  emulate -L zsh
+  local var
+  for var in ${(k)parameters[(I)_M1ZSH_LOADED*]}; do
+    unset $var
+  done
 }
