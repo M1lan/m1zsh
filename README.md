@@ -32,6 +32,7 @@ Local release-prep rewrite. No GitHub push has been performed yet.
 ├── lib/doctor.zsh              # m1zsh_doctor health-check implementation
 ├── modules/                    # ordered startup phases
 ├── snippets/                   # reusable public snippets loaded by Zi/source
+├── snippets/helpers/           # small zsh helper functions (auto-sourced)
 ├── completions/                # public generated completions, with provenance
 ├── templates/                  # copy/symlink examples for users
 ├── scripts/                    # dev harness checks

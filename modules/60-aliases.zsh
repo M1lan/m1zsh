@@ -30,3 +30,16 @@ where-all() {
   print -r -- 'command -v:'
   command -v -- "$1"
 }
+
+# Auto-source small public helpers from snippets/helpers/. Each file is
+# self-guarded with `command -v <tool> >/dev/null 2>&1 || return 0`, so
+# loading them is safe even when their underlying tools are absent. The
+# per-module `_M1ZSH_LOADED_modules_60_aliases_zsh` sentinel set by
+# `m1zsh_source` prevents this loop from running twice in one shell.
+if [[ -n ${M1ZSH_HOME:-} && -d ${M1ZSH_HOME}/snippets/helpers ]]; then
+  local _m1zsh_helper
+  for _m1zsh_helper in ${M1ZSH_HOME}/snippets/helpers/*.zsh(N); do
+    source "$_m1zsh_helper"
+  done
+  unset _m1zsh_helper
+fi
