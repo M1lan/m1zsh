@@ -79,6 +79,24 @@ just doctor                                    # full health report
 error (e.g. insecure `compaudit` directories), and `2` if only warnings
 were reported.
 
+## Environment variables
+
+Public knobs the framework reads at load time:
+
+- `M1ZSH_HOME` — repo root; auto-detected from `init.zsh` if unset.
+- `M1ZSH_SKIP_ZI=1` — bypass the Zi bootstrap module (fallbacks still load).
+- `M1ZSH_DISABLE_TOOL_ADAPTERS=1` — skip `modules/70-tools.zsh` snippets.
+- `M1ZSH_DISABLE_COMPLETIONS=1` — skip the completion subsystem entirely.
+  Useful for embedded shells, CI runners, or environments where `compinit`
+  is undesirable.
+- `M1ZSH_COMPINIT_INSECURE=1` — keep `compinit -i` (insecure dirs are still
+  skipped) but suppress the one-shot `compaudit` warning. Use only when you
+  knowingly run on a multi-user host or with shared group ownership of an
+  fpath dir.
+- `ZCACHEDIR` — cache directory; defaults to `${XDG_CACHE_HOME:-$HOME/.cache}/zsh`.
+  The compiled completion dump lives at `$ZCACHEDIR/.zcompdump(.zwc)` and
+  is rebuilt when older than 24h or staler than any `fpath` entry.
+
 ## Personal config boundary
 
 Put private settings in one of these ignored locations:
