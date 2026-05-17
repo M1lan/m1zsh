@@ -17,16 +17,23 @@ setopt hist_ignore_space hist_ignore_all_dups hist_find_no_dups hist_reduce_blan
 export REPORTTIME=${REPORTTIME:-2}
 export KEYTIMEOUT=${KEYTIMEOUT:-15}
 
-HISTFILE=${HISTFILE:-$XDG_STATE_HOME/zsh/history}
+HISTFILE=${HISTFILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history}
 HISTSIZE=${HISTSIZE:-100000}
 SAVEHIST=${SAVEHIST:-100000}
 export HISTFILE HISTSIZE SAVEHIST
 
 if [[ -t 0 ]]; then
-  export GPG_TTY=$(tty)
+  GPG_TTY=$(tty 2>/dev/null) && export GPG_TTY
 fi
 
-if [[ ${M1ZSH_ENABLE_TITLE:-1} == 1 ]]; then
+# Window-title hook: only attach when the terminal can actually render an
+# OSC 2 sequence. `add-zsh-hook` already dedupes by function name, so the
+# `_M1ZSH_LOADED_*` per-module guard plus this terminal check together make
+# the hook installation fully idempotent.
+if [[ ${M1ZSH_ENABLE_TITLE:-1} == 1 \
+      && ${TERM:-dumb} != dumb \
+      && ${TERM:-dumb} != linux \
+      && ${TERM:-dumb} != unknown ]]; then
   autoload -Uz add-zsh-hook
   m1zsh_title_precmd() {
     emulate -L zsh
