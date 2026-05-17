@@ -1,0 +1,81 @@
+#!/usr/bin/env zsh
+# m1zsh -- user-facing dispatcher.
+#
+# Resolves M1ZSH_HOME from the script location (../), sources init.zsh in a
+# fresh interactive zsh, and dispatches subcommands. Designed to be safe to
+# invoke from any shell, including bash and non-interactive contexts.
+#
+# Subcommands:
+#   doctor [...]   run m1zsh_doctor in a fresh interactive shell
+#   version        print the contents of VERSION
+#   home           print the resolved M1ZSH_HOME
+#   help | -h      show this message
+#
+# Exit codes mirror the underlying command (e.g. m1zsh doctor returns
+# 1/2/64 per the doctor contract).
+
+emulate -L zsh
+setopt no_unset pipe_fail err_return
+
+# Resolve script directory without relying on readlink (BSD vs GNU diff).
+_self=${0:A}
+_bindir=${_self:h}
+_home=${M1ZSH_HOME:-${_bindir:h}}
+
+_usage() {
+  cat <<EOF
+usage: m1zsh <subcommand> [args]
+
+Subcommands:
+  doctor [--text|--json|--quiet] [--color=auto|always|never]
+                  Run the m1zsh health check in a fresh interactive zsh.
+  version         Print the m1zsh release version (from VERSION).
+  home            Print the resolved M1ZSH_HOME directory.
+  help            Show this message.
+
+Environment:
+  M1ZSH_HOME      Override the install directory (default: parent of this
+                  script).
+EOF
+}
+
+_run_in_shell() {
+  # Args: <code> [positional ...]
+  local code=$1; shift
+  # ZDOTDIR=/dev/null silences user rc files; we explicitly source init.zsh.
+  ZDOTDIR=/dev/null exec zsh -ic "$code" m1zsh "$@"
+}
+
+_sub=${1:-help}
+shift 2>/dev/null || true
+
+case $_sub in
+  doctor)
+    # NOTE: keep the shell script body small; everything important lives in
+    # lib/doctor.zsh so behaviour is identical to interactive `m1zsh_doctor`.
+    _run_in_shell '
+      export M1ZSH_HOME="'"$_home"'"
+      source "$M1ZSH_HOME/init.zsh"
+      m1zsh_doctor "$@"
+    ' "$@"
+    ;;
+  version|--version|-V)
+    if [[ -r "$_home/VERSION" ]]; then
+      print -r -- ${"$(<$_home/VERSION)"%%[$'\n\r ']*}
+    else
+      print -u2 -- "m1zsh: VERSION file missing at $_home/VERSION"
+      exit 1
+    fi
+    ;;
+  home)
+    print -r -- "$_home"
+    ;;
+  help|--help|-h|'')
+    _usage
+    ;;
+  *)
+    print -u2 -- "m1zsh: unknown subcommand: $_sub"
+    _usage >&2
+    exit 64
+    ;;
+esac
