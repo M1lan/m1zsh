@@ -3,7 +3,7 @@ set shell := ["bash", "-uc"]
 _default:
   @just --list
 
-check: zsh-syntax secrets smoke smoke-strict smoke-twice smoke-setopts prek-check
+check: zsh-syntax secrets smoke smoke-strict smoke-twice smoke-setopts smoke-completion prek-check
 
 zsh-syntax:
   @scripts/check-zsh.bash
@@ -80,6 +80,84 @@ smoke-setopts:
   printf '%s\n' "$out" | grep -qx 'smoke-setopts-ok' \
     || { printf 'smoke-setopts: option regression detected\n' >&2; exit 1; }
   printf 'smoke-setopts: PASS\n'
+
+# Completion subsystem invariants: compinit must run exactly once per
+# shell, produce a $ZCACHEDIR/.zcompdump, pre-compile the .zwc, and the
+# framework's own fpath entries must pass compaudit. Catches:
+#   - regressions where compinit is skipped or its guard breaks
+#   - missing zcompile (lost ~30% load speedup)
+#   - the module being sourced under nounset losing $LS_COLORS guard
+#   - re-source duplicating compinit (R2 idempotency regression)
+#   - new fpath additions becoming world/group-writable accidentally
+#   - the M1ZSH_DISABLE_COMPLETIONS escape hatch silently breaking
+smoke-completion:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  tmpdir=$(mktemp -d)
+  trap 'rm -rf "$tmpdir"' EXIT
+  out=$(XDG_CACHE_HOME="$tmpdir/cache" zsh -f -ic '
+    export M1ZSH_HOME="$PWD" M1ZSH_SKIP_ZI=1 M1ZSH_DISABLE_TOOL_ADAPTERS=1
+    export XDG_CACHE_HOME="'"$tmpdir"'/cache"
+    export ZCACHEDIR="$XDG_CACHE_HOME/zsh"
+    source "$M1ZSH_HOME/init.zsh"
+
+    (( ${+_comps} )) && (( ${#_comps} > 0 )) \
+      && print -- compinit-ran-ok \
+      || { print -u2 -- "FAIL: _comps unset/empty after init"; exit 1; }
+
+    dump=$ZCACHEDIR/.zcompdump
+    [[ -f $dump ]] \
+      && print -- zcompdump-exists-ok \
+      || { print -u2 -- "FAIL: $dump missing"; exit 1; }
+
+    [[ -f ${dump}.zwc ]] \
+      && print -- zwc-exists-ok \
+      || { print -u2 -- "FAIL: ${dump}.zwc missing (zcompile skipped?)"; exit 1; }
+
+    autoload -Uz compaudit
+    framework_issues=$(compaudit 2>/dev/null | grep -F "$M1ZSH_HOME" || true)
+    if [[ -n $framework_issues ]]; then
+      print -u2 -- "FAIL: compaudit issues in framework fpath:"
+      print -u2 -- "$framework_issues"
+      exit 1
+    fi
+    print -- compaudit-clean-ok
+
+    # R2 idempotency: re-source must not re-run compinit. The per-module
+    # guard is the canonical signal; if it is unset on second pass the
+    # module ran twice.
+    source "$M1ZSH_HOME/init.zsh"
+    [[ ${_M1ZSH_LOADED_modules_30_completion_zsh:-0} == 1 ]] \
+      && print -- guard-intact-ok \
+      || { print -u2 -- "FAIL: completion module guard lost after re-source"; exit 1; }
+
+    print -- smoke-completion-ok
+  ' 2>&1)
+  printf '%s\n' "$out"
+  for marker in compinit-ran-ok zcompdump-exists-ok zwc-exists-ok \
+                compaudit-clean-ok guard-intact-ok smoke-completion-ok; do
+    printf '%s\n' "$out" | grep -qx "$marker" \
+      || { printf 'smoke-completion: missing marker %s\n' "$marker" >&2; exit 1; }
+  done
+
+  # M1ZSH_DISABLE_COMPLETIONS escape hatch must skip compinit entirely
+  # but still mark the module guard so re-source remains a no-op.
+  off=$(XDG_CACHE_HOME="$tmpdir/cache-off" zsh -f -ic '
+    export M1ZSH_HOME="$PWD" M1ZSH_SKIP_ZI=1 M1ZSH_DISABLE_TOOL_ADAPTERS=1
+    export M1ZSH_DISABLE_COMPLETIONS=1
+    export XDG_CACHE_HOME="'"$tmpdir"'/cache-off"
+    export ZCACHEDIR="$XDG_CACHE_HOME/zsh"
+    source "$M1ZSH_HOME/init.zsh"
+    (( ${+_comps} )) \
+      && { print -u2 -- "FAIL: _comps set despite M1ZSH_DISABLE_COMPLETIONS=1"; exit 1; }
+    [[ ${_M1ZSH_LOADED_modules_30_completion_zsh:-0} == 1 ]] \
+      || { print -u2 -- "FAIL: module guard not set in disable path"; exit 1; }
+    print -- disable-hatch-ok
+  ' 2>&1)
+  printf '%s\n' "$off"
+  printf '%s\n' "$off" | grep -qx 'disable-hatch-ok' \
+    || { printf 'smoke-completion: disable hatch broken\n' >&2; exit 1; }
+  printf 'smoke-completion: PASS\n'
 
 prek-check:
   @if command -v prek >/dev/null 2>&1; then prek run --all-files; else printf 'prek not installed; skipping\n' >&2; fi
