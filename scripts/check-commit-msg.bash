@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 
-: "${EPOCHREALTIME:?requires GNU Bash >= 5.3}" 2> /dev/null || {
+# Re-exec under a newer Bash if invoked by macOS's stock /bin/bash 3.2.
+if ((BASH_VERSINFO[0] < 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 3))); then
+  while IFS= read -r bash_bin; do
+    if [[ -x $bash_bin && $bash_bin != "$BASH" ]] &&
+      "$bash_bin" -c '((BASH_VERSINFO[0] > 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] >= 3)))' > /dev/null 2>&1; then
+      exec "$bash_bin" "$0" "$@"
+    fi
+  done < <(type -a -P bash 2> /dev/null)
+
   printf 'error: GNU Bash >= 5.3 required (found %s)\n' "$BASH_VERSION" >&2
   exit 1
-}
+fi
 
 set -uo pipefail
 export LC_ALL=C
