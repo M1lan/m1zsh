@@ -8,7 +8,8 @@ local and account-specific config lives outside the repo.
 
 ## Status
 
-Local release-prep rewrite. No GitHub push has been performed yet.
+Published at [`M1lan/m1zsh`](https://github.com/M1lan/m1zsh); current release
+`v0.1.0`.
 
 ## Design goals
 
@@ -48,7 +49,7 @@ Local release-prep rewrite. No GitHub push has been performed yet.
 ## Quick start
 
 ```sh
-git clone git@github.com:m1lan/m1zsh.git ~/.config/m1zsh
+git clone git@github.com:M1lan/m1zsh.git ~/.config/m1zsh
 cd ~/.config/m1zsh
 just check
 ```
@@ -151,6 +152,6 @@ groups use `wait` and `lucid` for turbo loading. Completion setup keeps
 extra fpath entries and `zsh-users/zsh-completions` before `compinit`, then
 replays Zi completion definitions.
 
-## Before publishing
+## Releasing
 
-See `docs/release-checklist.md`.
+See `docs/release-checklist.md` before tagging a release.
